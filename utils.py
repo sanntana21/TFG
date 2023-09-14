@@ -207,7 +207,7 @@ def create_LSTM_model(
         *,
         prediction_horizion : int = None,
         window_size: int = None,
-        computed_option : int = None
+        model : int = None
 ):
     tf.random.set_seed(42)
     # Setup dataset hyperparameters
@@ -215,7 +215,7 @@ def create_LSTM_model(
     WINDOW_SIZE = window_size
     model_LSTM = None
 
-    if computed_option == 0:
+    if model < 2:
         # Let's build an LSTM model with the Functional API
         inputs = tf.keras.layers.Input(shape=(WINDOW_SIZE))
         x = tf.keras.layers.Lambda(lambda x: tf.expand_dims(x, axis=1))(inputs)  # expand input dimension to be compatible with LSTM
@@ -307,15 +307,30 @@ def save_results(
         logging.error("Error al guardar los resultados")
 
     return True
-
+def change_shape_by_participant(data):
+    original_shape = data.shape
+    new_shape = (original_shape[0] * original_shape[1], original_shape[2])
+    reshaped_array = data.reshape(new_shape)
+    return reshaped_array
 def data_splits_preprocessing(
         X_train, y_train, X_validation, y_validation, X_test, y_test,
-        computed_option):
+        model):
     try:
-        if computed_option == 0:
+        if model == 0:
             X_train, y_train, X_validation, y_validation, X_test, y_test = [
                 np.squeeze(i) for i in [X_train, y_train, X_validation, y_validation, X_test, y_test]
             ]
+        elif model == 1:
+            X_train, y_train, X_validation, y_validation, X_test, y_test = [i.transpose(1, 0, 2) for i in
+                                                                            [X_train, y_train, X_validation,
+                                                                             y_validation, X_test, y_test]
+                                                                            ]
+
+            X_train, y_train, X_validation, y_validation, X_test, y_test = [change_shape_by_participant(i) for i in
+                                                                            [X_train, y_train, X_validation,
+                                                                             y_validation, X_test, y_test]
+                                                                            ]
+
 
     except:
         logging.error("Error al preprocesar los conjuntos")
@@ -331,7 +346,8 @@ def generate_results(
         X_test,
         horizon,
         model_LSTM,
-        show
+        show,
+        window_size
 ):
     info_results = {}
     if model == 0:
@@ -341,6 +357,14 @@ def generate_results(
             X_test=X_test,
             horizon=horizon,
             model_LSTM=model_LSTM,show=show)
+    elif model == 1:
+        info_results = generate_results_model_1(y_test=y_test,
+                                                predictions=predictions,
+                                                computed_option=computed_option,
+                                                X_test=X_test,
+                                                horizon=horizon,
+                                                window_size=window_size,
+                                                model_LSTM=model_LSTM, show=show)
 
     return info_results
 def generate_results_model_0(
@@ -435,6 +459,111 @@ def generate_results_model_0(
     info_results["TRANSFORMED_PREDICITION_DISPERSION_FIG"], info_results["TRANSFORMED_PREDICITION_DISPERSION_VALUE"]\
         = plot_dispersion_in_predictions(predictions_transformed, test_transformed)
 
+    return info_results
+
+def generate_results_model_1(
+        *,
+        y_test,
+        predictions,
+        computed_option,
+        X_test,
+        horizon,
+        model_LSTM,
+        window_size,
+        show
+):
+    info_results = {}
+    DATA_BY_PARTICIPANT = int(y_test.shape[0] / 25)
+    poblational_prediction = np.ones(shape=(DATA_BY_PARTICIPANT, horizon))
+    poblational_y_test = np.ones(shape=(DATA_BY_PARTICIPANT, horizon))
+    poblational_X_test = np.ones(shape=(DATA_BY_PARTICIPANT, window_size))
+    for i in range(0, DATA_BY_PARTICIPANT):
+        poblational_prediction[i, :] = np.sum(np.array(predictions[i::DATA_BY_PARTICIPANT]), axis=0)
+        poblational_y_test[i, :] = np.sum(np.array(y_test[i::DATA_BY_PARTICIPANT]), axis=0)
+        poblational_X_test[i, :] = np.sum(np.array(X_test[i::DATA_BY_PARTICIPANT]), axis=0)
+    info_results["MEAN_Y"] = np.mean(poblational_y_test)
+    info_results["POINT_TO_POINT_MAE"] = mean_absolute_error(poblational_y_test, poblational_prediction)
+    info_results["POINT_TO_POINT_MSE"] = mean_absolute_error(poblational_y_test, poblational_prediction)
+
+    index_result = 0
+    info_results["BEST_MEDIUM_WORST_MAE"]= [0, 0, 0]
+    info_results["BEST_MEDIUM_WORST_FIG"] = [0, 0, 0]
+    info_results["BEST_MEDIUM_WORST_FIG_DISPERSION"]= [0, 0, 0]
+    info_results["BEST_MEDIUM_WORST_VALUE_DISPERSION"] = [0, 0, 0]
+    info_results["POBLATIONAL_MAE"]= mean_squared_error(np.sum(poblational_y_test, axis=1), np.sum(poblational_prediction, axis=1))
+    info_results["POBLATIONAL_MSE"]= mean_absolute_error(np.sum(poblational_y_test, axis=1), np.sum(poblational_prediction, axis=1))
+    info_results["POBLATIONAL_MEAN"] = np.mean(np.sum(poblational_y_test, axis=1))
+    list_of_MAE = [mean_absolute_error(poblational_prediction[i], poblational_y_test[i]) for i in
+                   range(0, len(poblational_y_test))]
+    list_of_values = sorted(list_of_MAE)
+    mean_value = mean(list_of_MAE)
+    closest_value = min(list_of_MAE, key=lambda x: abs(x - mean_value))
+    # Crear un array de índices
+    indices = [list_of_MAE.index(list_of_values[-1]),
+               list_of_MAE.index(closest_value),
+               list_of_MAE.index(list_of_values[0])]
+    if computed_option == 0:
+        for i in indices:
+            info_results["BEST_MEDIUM_WORST_MAE"][index_result] = list_of_MAE[i]
+            info_results["BEST_MEDIUM_WORST_FIG"][index_result], _ = plot_predictions_vs_real(predictions[i], y_test[i])
+            info_results["BEST_MEDIUM_WORST_FIG_DISPERSION"][index_result], \
+                info_results["BEST_MEDIUM_WORST_VALUE_DISPERSION"][index_result] = plot_dispersion_in_predictions(predictions[i],
+                                                                                                  y_test[i])
+            if show:
+                info_results["BEST_MEDIUM_WORST_FIG"][index_result].show()
+            index_result += 1
+    else:
+        for i in indices:
+            print(list_of_MAE[i])
+            END = 24
+            STARTED_MINUTE = 0
+            previous = np.ones(shape=(24))
+            for j in range(0, 24):
+                previous[j] = np.sum(poblational_X_test[i, :][60 * j:60 * (j + 1)])
+            predictions_to_plot = np.ones(shape=(END + horizon))
+            predictions_to_plot[0:END] = previous[:]
+            predictions_to_plot[END:] = poblational_prediction[i, :]
+            y_test_to_plot = np.ones(shape=(END + horizon))
+            y_test_to_plot[0:END] = previous[:]
+            y_test_to_plot[END:] = poblational_y_test[i, :]
+            info_results["BEST_MEDIUM_WORST_FIG"][index_result], _ = plot_predictions_vs_real(predictions_to_plot, y_test_to_plot)
+            info_results["BEST_MEDIUM_WORST_FIG_DISPERSION"][index_result], info_results["BEST_MEDIUM_WORST_VALUE_DISPERSION"][
+                index_result] = plot_dispersion_in_predictions(predictions_to_plot, y_test_to_plot)
+            if show:
+                info_results["BEST_MEDIUM_WORST_FIG"][index_result].show()
+            index_result += 1
+            plot_predictions_vs_real(predictions_to_plot, y_test_to_plot)
+
+    period = poblational_X_test[::120, :]
+    period_results = make_preds(model=model_LSTM,input_data=period)
+    period_results_aux = np.array(period_results)
+    period_results_to_plot = np.array(period_results_aux).reshape(horizon* 23)
+    y_test_to_plot = poblational_y_test[::120, :].reshape(horizon* 23)
+    plot_predictions_vs_real(predictions=period_results_to_plot, reals=y_test_to_plot)
+    info_results["TWO_DAYS_RESULTS_FIG"], \
+        info_results["TWO_DAYS_RESULTS_FIG_ZOOMED"]= plot_predictions_vs_real(predictions=period_results_to_plot,
+                                                               reals=y_test_to_plot)
+    info_results["TWO_DAYS_RESULTS_PREDICTED"]= np.sum(period_results_to_plot)
+    info_results["TWO_DAYS_RESULTS_REAL"]= np.sum(y_test_to_plot)
+    info_results["TWO_DAYS_RESULTS_DISPERSION_FIG"], \
+        info_results["TWO_DAYS_RESULTS_DISPERSION_VALUE"]= plot_dispersion_in_predictions(period_results_to_plot, y_test_to_plot)
+    if show:
+        info_results["TWO_DAYS_RESULTS_FIG"].show()
+        info_results["TWO_DAYS_RESULTS_DISPERSION_FIG"].show()
+    predictions_transformed = []
+    test_transformed = []
+    for i in range(0, len(period_results_to_plot), horizon):
+        group_sum = np.sum(period_results_to_plot[i:i + horizon])
+        predictions_transformed.append(group_sum)
+        group_sum = np.sum(y_test_to_plot[i:i + horizon])
+        test_transformed.append(group_sum)
+
+    # Convert the transformed list into a numpy array
+    predictions_transformed = np.array(predictions_transformed)
+    test_transformed = np.array(test_transformed)
+    info_results["TRANSFORMED_PREDICITION_FIG"], _ = plot_predictions_vs_real(predictions_transformed, test_transformed)
+    info_results["TRANSFORMED_PREDICITION_DISPERSION_FIG"], info_results["TRANSFORMED_PREDICITION_DISPERSION_VALUE"]= plot_dispersion_in_predictions(
+        predictions_transformed, test_transformed)
     return info_results
 
 def learning_curves(
