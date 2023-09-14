@@ -1,13 +1,11 @@
 import gzip
 import pandas as pd
-import statsmodels
 from statistics import mean, median
 import numpy as np
 import pickle
 import os
 import json
-import seaborn as sbn
-from sklearn.model_selection import train_test_split
+import sys, getopt
 from sklearn.metrics import mean_squared_error
 from sklearn.metrics import mean_absolute_error
 import matplotlib.pyplot as plt
@@ -207,7 +205,8 @@ def create_LSTM_model(
         *,
         prediction_horizion : int = None,
         window_size: int = None,
-        model : int = None
+        model : int = None,
+        number_of_participants : int = None
 ):
     tf.random.set_seed(42)
     # Setup dataset hyperparameters
@@ -221,7 +220,20 @@ def create_LSTM_model(
         x = tf.keras.layers.Lambda(lambda x: tf.expand_dims(x, axis=1))(inputs)  # expand input dimension to be compatible with LSTM
         # print(x.shape)
         # x = layers.LSTM(128, activation="relu", return_sequences=True)(x) # this layer will error if the inputs are not the right shape
-        x =tf.keras.layers.LSTM(128, activation="relu")(x)  # using the tanh loss function results in a massive error
+        x = tf.keras.layers.LSTM(128, activation="relu")(x)  # using the tanh loss function results in a massive error
+        # print(x.shape)
+        # Add another optional dense layer (you could add more of these to see if they improve model performance)
+        # x = layers.Dense(32, activation="relu")(x)
+        output = tf.keras.layers.Dense(HORIZON)(x)
+        model_LSTM = tf.keras.Model(inputs=inputs, outputs=output, name="model_5_lstm")
+    else:
+        # Let's build an LSTM model with the Functional API
+        inputs = tf.keras.layers.Input(shape=(number_of_participants, WINDOW_SIZE))
+        # x = layers.Lambda(lambda x: tf.expand_dims(x, axis=1))(inputs) # expand input dimension to be compatible with LSTM
+        # print(x.shape)
+        # x = layers.LSTM(128, activation="relu", return_sequences=True)(x) # this layer will error if the inputs are not the right shape
+        x = tf.keras.layers.LSTM(128, return_sequences=True, activation="relu")(
+            inputs)  # using the tanh loss function results in a massive error
         # print(x.shape)
         # Add another optional dense layer (you could add more of these to see if they improve model performance)
         # x = layers.Dense(32, activation="relu")(x)
@@ -330,8 +342,10 @@ def data_splits_preprocessing(
                                                                             [X_train, y_train, X_validation,
                                                                              y_validation, X_test, y_test]
                                                                             ]
-
-
+        elif model == 2:
+            X_train, y_train, X_validation, y_validation, X_test, y_test = [
+                i.transpose(1, 0, 2) for i in [X_train, y_train, X_validation, y_validation, X_test, y_test]
+            ]
     except:
         logging.error("Error al preprocesar los conjuntos")
 
@@ -365,7 +379,13 @@ def generate_results(
                                                 horizon=horizon,
                                                 window_size=window_size,
                                                 model_LSTM=model_LSTM, show=show)
-
+    elif model == 2:
+        info_results = generate_results_model_2(y_test=y_test,
+                                                predictions=predictions,
+                                                computed_option=computed_option,
+                                                X_test=X_test,
+                                                horizon=horizon,
+                                                model_LSTM=model_LSTM, show=show)
     return info_results
 def generate_results_model_0(
         *,
@@ -375,7 +395,8 @@ def generate_results_model_0(
         X_test,
         horizon,
         model_LSTM,
-        show):
+        show
+):
     info_results = {}
     info_results["POINT_TO_POINT_MSE"]= mean_squared_error(y_test, predictions)
     info_results["POINT_TO_POINT_MAE"] = mean_absolute_error(y_test, predictions)
@@ -566,6 +587,102 @@ def generate_results_model_1(
         predictions_transformed, test_transformed)
     return info_results
 
+def generate_results_model_2(
+        *,
+        y_test,
+        predictions,
+        computed_option,
+        X_test,
+        horizon,
+        model_LSTM,
+        show
+):
+    info_results = {}
+    predictions = np.sum(predictions, axis=1)
+    y_test = np.sum(y_test, axis=1)
+    info_results["POINT_TO_POINT_MAE"] = mean_absolute_error(y_test, predictions)
+    info_results["POINT_TO_POINT_MSE"] = mean_absolute_error(y_test, predictions)
+    info_results["MEAN_Y"] = np.mean(y_test)
+    index_result = 0
+    info_results["BEST_MEDIUM_WORST_MAE"] = [0, 0, 0]
+    info_results["BEST_MEDIUM_WORST_FIG"]= [0, 0, 0]
+    info_results["BEST_MEDIUM_WORST_FIG_DISPERSION"] = [0, 0, 0]
+    info_results["BEST_MEDIUM_WORST_VALUE_DISPERSION"]= [0, 0, 0]
+    info_results["POBLATIONAL_MAE"] = mean_absolute_error(np.sum(y_test, axis=1), np.sum(predictions, axis=1))
+    info_results["POBLATIONAL_MSE"] = mean_squared_error(np.sum(y_test, axis=1), np.sum(predictions, axis=1))
+    info_results["POBLATIONAL_MEAN"] = np.mean(np.sum(y_test, axis=1))
+    list_of_MAE = [mean_absolute_error(predictions[i], y_test[i]) for i in range(0, len(y_test))]
+    list_of_values = sorted(list_of_MAE)
+    mean_value = mean(list_of_MAE)
+    closest_value = min(list_of_MAE, key=lambda x: abs(x - mean_value))
+    # Crear un array de índices
+    indices = [list_of_MAE.index(list_of_values[-1]),
+               list_of_MAE.index(closest_value),
+               list_of_MAE.index(list_of_values[0])]
+    if computed_option == 0:
+        for i in indices:
+            info_results["BEST_MEDIUM_WORST_MAE"][index_result] = list_of_MAE[i]
+            info_results["BEST_MEDIUM_WORST_FIG"][index_result], _ = plot_predictions_vs_real(predictions[i], y_test[i])
+            info_results["BEST_MEDIUM_WORST_FIG_DISPERSION"][index_result], \
+                info_results["BEST_MEDIUM_WORST_VALUE_DISPERSION"][index_result] = plot_dispersion_in_predictions(predictions[i],
+                                                                                                  y_test[i])
+            if show:
+                info_results["BEST_MEDIUM_WORST_FIG"][index_result].show()
+            index_result += 1
+    else:
+        for i in indices:
+            END = 24
+            STARTED_MINUTE = 0
+            previous = np.ones(shape=(24))
+            X_sum = np.sum(X_test, axis=1)
+            for j in range(0, 24):
+                previous[j] = np.sum(X_sum[i, :][60 * j:60 * (j + 1)])
+            predictions_to_plot = np.ones(shape=(END + horizon))
+            predictions_to_plot[0:END] = previous[:]
+            predictions_to_plot[END:] = predictions[i, :]
+            y_test_to_plot = np.ones(shape=(END + horizon))
+            y_test_to_plot[0:END] = previous[:]
+            y_test_to_plot[END:] = y_test[i, :]
+            info_results["BEST_MEDIUM_WORST_FIG"][index_result], _ = plot_predictions_vs_real(predictions_to_plot, y_test_to_plot)
+            info_results["BEST_MEDIUM_WORST_FIG_DISPERSION"][index_result], info_results["BEST_MEDIUM_WORST_VALUE_DISPERSION"][
+                index_result] = plot_dispersion_in_predictions(predictions_to_plot, y_test_to_plot)
+            if show:
+                info_results["BEST_MEDIUM_WORST_FIG"][index_result].show()
+            index_result += 1
+            plot_predictions_vs_real(predictions_to_plot, y_test_to_plot)
+
+    index = 0
+    period = X_test[::120, :]
+    period_results = make_preds(model=model_LSTM, input_data=period)
+    period_results = np.sum(period_results, axis=1)
+    period_results_to_plot = np.array(period_results).reshape(horizon* 23)
+    y_test_to_plot = y_test[::120, :].reshape(horizon* 23)
+    info_results["TWO_DAYS_RESULTS_FIG"], \
+        info_results["TWO_DAYS_RESULTS_FIG_ZOOMED"]= plot_predictions_vs_real(predictions=period_results_to_plot,
+                                                               reals=y_test_to_plot)
+    info_results["TWO_DAYS_RESULTS_PREDICTED"]= np.sum(period_results_to_plot)
+    info_results["TWO_DAYS_RESULTS_REAL"]= np.sum(y_test_to_plot)
+    info_results["TWO_DAYS_RESULTS_DISPERSION_FIG"], \
+        info_results["TWO_DAYS_RESULTS_DISPERSION_VALUE"]= plot_dispersion_in_predictions(period_results_to_plot, y_test_to_plot)
+    if show:
+        info_results["TWO_DAYS_RESULTS_FIG"].show()
+        info_results["TWO_DAYS_RESULTS_DISPERSION_FIG"].show()
+    plot_predictions_vs_real(predictions=period_results_to_plot, reals=y_test_to_plot)
+    predictions_transformed = []
+    test_transformed = []
+    for i in range(0, len(period_results_to_plot), horizon):
+        group_sum = np.sum(period_results_to_plot[i:i + horizon])
+        predictions_transformed.append(group_sum)
+        group_sum = np.sum(y_test_to_plot[i:i + horizon])
+        test_transformed.append(group_sum)
+
+    # Convert the transformed list into a numpy array
+    predictions_transformed = np.array(predictions_transformed)
+    test_transformed = np.array(test_transformed)
+    info_results["TRANSFORMED_PREDICITION_FIG"], _ = plot_predictions_vs_real(predictions_transformed, test_transformed)
+    info_results["TRANSFORMED_PREDICITION_DISPERSION_FIG"], info_results["TRANSFORMED_PREDICITION_DISPERSION_VALUE"] = plot_dispersion_in_predictions(
+        predictions_transformed, test_transformed)
+    return info_results
 def learning_curves(
         *,
         hist,
@@ -707,3 +824,6 @@ def get_split_time_definiton(
 
     ]
     return INDEXS[num_split]
+
+
+
