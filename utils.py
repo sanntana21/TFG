@@ -279,7 +279,7 @@ def save_results(
             TRANSFORMED_PREDICITION_OLS=info_results["TRANSFORMED_PREDICITION_DISPERSION_VALUE"],
             MEAN_Y=info_results["MEAN_Y"],
             POBLATIONAL_MEAN=info_results["POBLATIONAL_MEAN"],
-            HIST=info_results["hist.history"]
+            HIST=info_results["hist"].history
         )
         isExist = os.path.exists(file_path)
         if not isExist:
@@ -292,16 +292,17 @@ def save_results(
 
         # Guardamos las imagenes restantes
         info_results.get("TWO_DAYS_RESULTS_DISPERSION_FIG").write_html(file_path + "/TWO_DAYS_OLS" + ".html")
-        info_results.get("BEST_MEDIUM_WORST_FIG[0]").write_html(file_path + "/WORST_MAE" + ".html")
-        info_results.get("BEST_MEDIUM_WORST_FIG[1]").write_html(file_path + "/AVERAGE_MAE" + ".html")
-        info_results.get("BEST_MEDIUM_WORST_FIG[2]").write_html(file_path + "/BEST_MAE" + ".html")
-        info_results.get("BEST_MEDIUM_WORST_FIG_DISPERSION[0]").write_html(file_path + "/WORST_MAE_OLS" + ".html")
-        info_results.get("BEST_MEDIUM_WORST_FIG_DISPERSION[1]").write_html(file_path + "/AVERAGE_MAE_OLS" + ".html")
-        info_results.get("BEST_MEDIUM_WORST_FIG_DISPERSION[2]").write_html(file_path + "/BEST_MAE_OLS" + ".html")
+        info_results.get("BEST_MEDIUM_WORST_FIG")[0].write_html(file_path + "/WORST_MAE" + ".html")
+        info_results.get("BEST_MEDIUM_WORST_FIG")[1].write_html(file_path + "/AVERAGE_MAE" + ".html")
+        info_results.get("BEST_MEDIUM_WORST_FIG")[2].write_html(file_path + "/BEST_MAE" + ".html")
+        info_results.get("BEST_MEDIUM_WORST_FIG_DISPERSION")[0].write_html(file_path + "/WORST_MAE_OLS" + ".html")
+        info_results.get("BEST_MEDIUM_WORST_FIG_DISPERSION")[1].write_html(file_path + "/AVERAGE_MAE_OLS" + ".html")
+        info_results.get("BEST_MEDIUM_WORST_FIG_DISPERSION")[2].write_html(file_path + "/BEST_MAE_OLS" + ".html")
         info_results.get("TWO_DAYS_RESULTS_DISPERSION_FIG").write_html(file_path + "/TWO_DAYS_FIG" + ".html")
         info_results.get("TRANSFORMED_PREDICITION_FIG").write_html(file_path + "/TRANSFORMED_PREDICTION" + ".html")
         info_results.get("TRANSFORMED_PREDICITION_DISPERSION_FIG").write_html(file_path + "/TRANSFORMED_PREDICTION_OLS" + ".html"),
         info_results.get("TWO_DAYS_RESULTS_FIG_ZOOMED").write_html(file_path + "/TWO_DAYS_RESULTS_FIG" + ".html")
+        learning_curves(hist=info_results["hist"],file_path=file_path)
     except:
         logging.error("Error al guardar los resultados")
 
@@ -329,16 +330,17 @@ def generate_results(
         computed_option,
         X_test,
         horizon,
-        model_LSTM
+        model_LSTM,
+        show
 ):
     info_results = {}
     if model == 0:
-        generate_results_model_0(y_test=y_test,
+       info_results = generate_results_model_0(y_test=y_test,
             predictions=predictions,
             computed_option=computed_option,
             X_test=X_test,
             horizon=horizon,
-            model_LSTM=model_LSTM)
+            model_LSTM=model_LSTM,show=show)
 
     return info_results
 def generate_results_model_0(
@@ -348,11 +350,12 @@ def generate_results_model_0(
         computed_option,
         X_test,
         horizon,
-        model_LSTM):
+        model_LSTM,
+        show):
     info_results = {}
     info_results["POINT_TO_POINT_MSE"]= mean_squared_error(y_test, predictions)
     info_results["POINT_TO_POINT_MAE"] = mean_absolute_error(y_test, predictions)
-    info_results["MEAN"] = np.mean(y_test)
+    info_results["MEAN_Y"] = np.mean(y_test)
     info_results["POBLATIONAL_MAE"] = mean_absolute_error(np.sum(y_test, axis=1), np.sum(predictions, axis=1))
     info_results["POBLATIONAL_MSE"] = mean_squared_error(np.sum(y_test, axis=1), np.sum(predictions, axis=1))
     info_results["POBLATIONAL_MEAN"] = np.mean(np.sum(y_test, axis=1))
@@ -377,7 +380,8 @@ def generate_results_model_0(
             info_results["BEST_MEDIUM_WORST_FIG"][index_result], _ = plot_predictions_vs_real(predictions[i], y_test[i])
             info_results["BEST_MEDIUM_WORST_FIG_DISPERSION"][index_result], info_results["BEST_MEDIUM_WORST_VALUE_DISPERSION"][
                 index_result] = plot_dispersion_in_predictions(predictions[i], y_test[i])
-            info_results["BEST_MEDIUM_WORST_FIG"][index_result].show()
+            if show:
+                info_results["BEST_MEDIUM_WORST_FIG"][index_result].show()
             index_result += 1
     else:
         for i in indices:
@@ -396,7 +400,8 @@ def generate_results_model_0(
             info_results["BEST_MEDIUM_WORST_FIG"][index_result], _ = plot_predictions_vs_real(predictions_to_plot, y_test_to_plot)
             info_results["BEST_MEDIUM_WORST_FIG_DISPERSION"][index_result], info_results["BEST_MEDIUM_WORST_VALUE_DISPERSION"][
                 index_result] = plot_dispersion_in_predictions(predictions_to_plot, y_test_to_plot)
-            info_results["BEST_MEDIUM_WORST_FIG"][index_result].show()
+            if show:
+                info_results["BEST_MEDIUM_WORST_FIG"][index_result].show()
             index_result += 1
 
     index = 0
@@ -411,8 +416,9 @@ def generate_results_model_0(
     info_results["TWO_DAYS_RESULTS_REAL"] = np.sum(y_test_to_plot)
     info_results["TWO_DAYS_RESULTS_DISPERSION_FIG"], \
         info_results["TWO_DAYS_RESULTS_DISPERSION_VALUE"] = plot_dispersion_in_predictions(period_results_to_plot, y_test_to_plot)
-    info_results["TWO_DAYS_RESULTS_FIG"].show()
-    info_results["TWO_DAYS_RESULTS_DISPERSION_FIG"].show()
+    if show:
+        info_results["TWO_DAYS_RESULTS_FIG"].show()
+        info_results["TWO_DAYS_RESULTS_DISPERSION_FIG"].show()
 
     predictions_transformed = []
     test_transformed = []
@@ -430,6 +436,20 @@ def generate_results_model_0(
         = plot_dispersion_in_predictions(predictions_transformed, test_transformed)
 
     return info_results
+
+def learning_curves(
+        *,
+        hist,
+        file_path : str = None
+):
+    fig, loss_ax = plt.subplots()
+
+    loss_ax.plot(hist.history["loss"], "y", label = "train_loss")
+    loss_ax.plot(hist.history["val_loss"], "r", label = "val_loss")
+    loss_ax.set_ylabel("loss")
+    loss_ax.legend(loc = "upper left")
+    plt.savefig(file_path+"/curvas_aprendizaje")
+    pass
 def get_split_time_definiton(
         *,
         num_split : int = None

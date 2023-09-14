@@ -15,6 +15,7 @@ np.random.seed(42)
 tf.random.set_seed(42)
 SPLIT = 8
 HORIZON = WINDOW_SIZE = None
+SHOW_RESULTS = False
 
 """
 Analisis de parametros de entrada
@@ -60,12 +61,11 @@ model_LSTM.compile(loss="mae",
 
 hist = model_LSTM.fit(X_train,
             y_train,
-            epochs=100,
+            epochs=1,
             verbose=1,
             batch_size=256,
             validation_data=(X_validation, y_validation),
                callbacks=[early_stopping])
-
 
 predictions = make_preds(model=model_LSTM, input_data=X_test)
 
@@ -76,6 +76,10 @@ info_results = generate_results(
             computed_option=COMPUTED_OPTION,
             X_test=X_test,
             horizon=HORIZON,
-            model_LSTM=model_LSTM)
+            model_LSTM=model_LSTM,
+            show=SHOW_RESULTS)
+info_results["hist"] = hist
+save_results(results_dir_to_save_results=DIR_NAMES["save"],info_results=info_results,computed_option=COMPUTED_OPTION,low_data=LOW_DATA,
+             split=SPLIT)
 
 
