@@ -18,7 +18,7 @@ def make_mets_predictions(
         SHOW_RESULTS: bool = None,
         seed: int = 42
 ):
-    results = {"data": {}, "errors":[]}
+    results = {"data": {}, "errors": []}
     try:
         """
         MODELO ->
@@ -83,7 +83,7 @@ def make_mets_predictions(
 
         hist = model_LSTM.fit(X_train,
                               y_train,
-                              epochs=1,
+                              epochs=100,
                               verbose=1,
                               batch_size=256,
                               validation_data=(X_validation, y_validation),
@@ -117,20 +117,30 @@ def make_mets_predictions(
 
 
 if __name__ == "__main__":
-    sys.argv.append({"modelo":0,"computed_option":1})
+    sys.argv.append({"modelo":0,"save_results":True})
     print(sys.argv)
-    if isinstance(sys.argv[1:],dict):
+    if not isinstance(sys.argv[1], dict):
         if sys.argv[1] == "all":
             logging.warning("Generando predicciones de todas las combinaciones")
+            for MODELO in [1, 2]:
+                for COMPUTER_OPTION in [0, 1]:
+                    for SPLIT in [0,1,2,3,4,5,6,7,8]:
+                        make_mets_predictions(MODELO=MODELO,
+                                              COMPUTED_OPTION=COMPUTER_OPTION,
+                                              SAVE_RESULTS=True,
+                                              LOW_DATA=True,
+                                              SPLIT=SPLIT,
+                                              SHOW_RESULTS=False,
+                                              seed=42)
         else:
             logging.error("Los parametros de entrada no han sido indicados correctamente")
     else:
         body = sys.argv[1]
         default = {
             "modelo": 0, "computed_option": 0, "save_results": False, "split": 0, "show_results": False, "seed": 42,
-            "low_data" : True
+            "low_data": True
         }
-        for param in ["modelo", "computed_option","low_data", "save_results", "split", "show_results", "seed"]:
+        for param in ["modelo", "computed_option", "low_data", "save_results", "split", "show_results", "seed"]:
             if not body.get(param):
                 body[param] = default[param]
 
@@ -165,8 +175,6 @@ if __name__ == "__main__":
                 POBLATIONAL_MEAN=info_results["POBLATIONAL_MEAN"],
                 HIST=info_results["hist"].history
             )
-            text_results = {k:str(v) for k,v in text_results.items()}
+            text_results = {k: str(v) for k, v in text_results.items()}
 
-            print(json.dumps(text_results,indent=2))
-
-
+            print(json.dumps(text_results, indent=2))

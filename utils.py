@@ -275,22 +275,22 @@ def save_results(
             file_path += "hour/"
 
         text_results = dict(
-            POINT_TO_POINT_MAE=info_results["POINT_TO_POINT_MAE"],
-            POINT_TO_POINT_MSE=info_results["POINT_TO_POINT_MSE"],
-            POBLATIONAL_MAE=info_results["POBLATIONAL_MAE"],
-            POBLATIONAL_MSE=info_results["POBLATIONAL_MSE"],
-            BEST=info_results["BEST_MEDIUM_WORST_MAE"][2],
-            BEST_OLS=info_results["BEST_MEDIUM_WORST_VALUE_DISPERSION"][2],
-            MEDIUM=info_results["BEST_MEDIUM_WORST_MAE"][1],
-            MEDIUM_OLS=info_results["BEST_MEDIUM_WORST_VALUE_DISPERSION"][1],
-            WORST=info_results["BEST_MEDIUM_WORST_MAE"][0],
-            WORST_OLS=info_results["BEST_MEDIUM_WORST_VALUE_DISPERSION"][0],
-            TWO_DAYS_RESULTS_REAL=info_results["TWO_DAYS_RESULTS_REAL"],
-            TWO_DAYS_RESULTS_PREDICTED=info_results["TWO_DAYS_RESULTS_PREDICTED"],
-            TWO_DAYS_OLS=info_results["TWO_DAYS_RESULTS_DISPERSION_VALUE"],
-            TRANSFORMED_PREDICITION_OLS=info_results["TRANSFORMED_PREDICITION_DISPERSION_VALUE"],
-            MEAN_Y=info_results["MEAN_Y"],
-            POBLATIONAL_MEAN=info_results["POBLATIONAL_MEAN"],
+            POINT_TO_POINT_MAE=float(info_results["POINT_TO_POINT_MAE"]),
+            POINT_TO_POINT_MSE=float(info_results["POINT_TO_POINT_MSE"]),
+            POBLATIONAL_MAE=float(info_results["POBLATIONAL_MAE"]),
+            POBLATIONAL_MSE=float(info_results["POBLATIONAL_MSE"]),
+            BEST=float(info_results["BEST_MEDIUM_WORST_MAE"][2]),
+            BEST_OLS=list(info_results["BEST_MEDIUM_WORST_VALUE_DISPERSION"][2]),
+            MEDIUM=float(info_results["BEST_MEDIUM_WORST_MAE"][1]),
+            MEDIUM_OLS=list(info_results["BEST_MEDIUM_WORST_VALUE_DISPERSION"][1]),
+            WORST=float(info_results["BEST_MEDIUM_WORST_MAE"][0]),
+            WORST_OLS=list(info_results["BEST_MEDIUM_WORST_VALUE_DISPERSION"][0]),
+            TWO_DAYS_RESULTS_REAL=float(info_results["TWO_DAYS_RESULTS_REAL"]),
+            TWO_DAYS_RESULTS_PREDICTED=float(info_results["TWO_DAYS_RESULTS_PREDICTED"]),
+            TWO_DAYS_OLS=list(info_results["TWO_DAYS_RESULTS_DISPERSION_VALUE"]),
+            TRANSFORMED_PREDICITION_OLS=list(info_results["TRANSFORMED_PREDICITION_DISPERSION_VALUE"]),
+            MEAN_Y=float(info_results["MEAN_Y"]),
+            POBLATIONAL_MEAN=float(info_results["POBLATIONAL_MEAN"]),
             HIST=info_results["hist"].history
         )
         isExist = os.path.exists(file_path)
@@ -300,7 +300,7 @@ def save_results(
             logging.warning("Nuevo directorio creado:" + file_path)
 
         with open(file_path + "/info_resultados.txt", 'w') as f:
-            json.dump(json.dumps(str(text_results), indent=4), f, ensure_ascii=False, indent=4)
+            json.dump(text_results, f, ensure_ascii=False, indent=4)
 
         # Guardamos las imagenes restantes
         info_results.get("TWO_DAYS_RESULTS_DISPERSION_FIG").write_html(file_path + "/TWO_DAYS_OLS" + ".html")
