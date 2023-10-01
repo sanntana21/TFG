@@ -117,12 +117,12 @@ def make_mets_predictions(
 
 
 if __name__ == "__main__":
-    sys.argv.append({"modelo":0,"save_results":True})
+    sys.argv.append("all")
     print(sys.argv)
     if not isinstance(sys.argv[1], dict):
         if sys.argv[1] == "all":
             logging.warning("Generando predicciones de todas las combinaciones")
-            for MODELO in [1, 2]:
+            for MODELO in [0,1,2][0:1]:
                 for COMPUTER_OPTION in [0, 1]:
                     for SPLIT in [0,1,2,3,4,5,6,7,8]:
                         make_mets_predictions(MODELO=MODELO,
