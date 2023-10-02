@@ -299,6 +299,7 @@ def save_results(
             os.makedirs(file_path)
             logging.warning("Nuevo directorio creado:" + file_path)
 
+        text_results = {a:str(b) for a,b in text_results.items()}
         with open(file_path + "/info_resultados.txt", 'w') as f:
             json.dump(text_results, f, ensure_ascii=False, indent=4)
 
@@ -315,7 +316,8 @@ def save_results(
         info_results.get("TRANSFORMED_PREDICITION_DISPERSION_FIG").write_html(file_path + "/TRANSFORMED_PREDICTION_OLS" + ".html"),
         info_results.get("TWO_DAYS_RESULTS_FIG_ZOOMED").write_html(file_path + "/TWO_DAYS_RESULTS_FIG" + ".html")
         learning_curves(hist=info_results["hist"],file_path=file_path)
-    except:
+    except BaseException as e:
+        logging.error(e.args)
         logging.error("Error al guardar los resultados")
 
     return True
@@ -504,15 +506,15 @@ def generate_results_model_1(
         poblational_X_test[i, :] = np.sum(np.array(X_test[i::DATA_BY_PARTICIPANT]), axis=0)
     info_results["MEAN_Y"] = np.mean(poblational_y_test)
     info_results["POINT_TO_POINT_MAE"] = mean_absolute_error(poblational_y_test, poblational_prediction)
-    info_results["POINT_TO_POINT_MSE"] = mean_absolute_error(poblational_y_test, poblational_prediction)
+    info_results["POINT_TO_POINT_MSE"] = mean_squared_error(poblational_y_test, poblational_prediction)
 
     index_result = 0
     info_results["BEST_MEDIUM_WORST_MAE"]= [0, 0, 0]
     info_results["BEST_MEDIUM_WORST_FIG"] = [0, 0, 0]
     info_results["BEST_MEDIUM_WORST_FIG_DISPERSION"]= [0, 0, 0]
     info_results["BEST_MEDIUM_WORST_VALUE_DISPERSION"] = [0, 0, 0]
-    info_results["POBLATIONAL_MAE"]= mean_squared_error(np.sum(poblational_y_test, axis=1), np.sum(poblational_prediction, axis=1))
-    info_results["POBLATIONAL_MSE"]= mean_absolute_error(np.sum(poblational_y_test, axis=1), np.sum(poblational_prediction, axis=1))
+    info_results["POBLATIONAL_MAE"]= mean_absolute_error(np.sum(poblational_y_test, axis=1), np.sum(poblational_prediction, axis=1))
+    info_results["POBLATIONAL_MSE"]= mean_squared_error(np.sum(poblational_y_test, axis=1), np.sum(poblational_prediction, axis=1))
     info_results["POBLATIONAL_MEAN"] = np.mean(np.sum(poblational_y_test, axis=1))
     list_of_MAE = [mean_absolute_error(poblational_prediction[i], poblational_y_test[i]) for i in
                    range(0, len(poblational_y_test))]
@@ -526,18 +528,18 @@ def generate_results_model_1(
     if computed_option == 0:
         for i in indices:
             info_results["BEST_MEDIUM_WORST_MAE"][index_result] = list_of_MAE[i]
-            info_results["BEST_MEDIUM_WORST_FIG"][index_result], _ = plot_predictions_vs_real(predictions[i], y_test[i])
+            info_results["BEST_MEDIUM_WORST_FIG"][index_result], _ = plot_predictions_vs_real(poblational_prediction[i], poblational_y_test[i])
             info_results["BEST_MEDIUM_WORST_FIG_DISPERSION"][index_result], \
-                info_results["BEST_MEDIUM_WORST_VALUE_DISPERSION"][index_result] = plot_dispersion_in_predictions(predictions[i],
-                                                                                                  y_test[i])
+                info_results["BEST_MEDIUM_WORST_VALUE_DISPERSION"][index_result] = plot_dispersion_in_predictions(poblational_prediction[i],
+                                                                                                  poblational_y_test[i])
             if show:
                 info_results["BEST_MEDIUM_WORST_FIG"][index_result].show()
             index_result += 1
     else:
         for i in indices:
-            print(list_of_MAE[i])
             END = 24
             STARTED_MINUTE = 0
+            info_results["BEST_MEDIUM_WORST_MAE"][index_result] = list_of_MAE[i]
             previous = np.ones(shape=(24))
             for j in range(0, 24):
                 previous[j] = np.sum(poblational_X_test[i, :][60 * j:60 * (j + 1)])
@@ -601,7 +603,7 @@ def generate_results_model_2(
     predictions = np.sum(predictions, axis=1)
     y_test = np.sum(y_test, axis=1)
     info_results["POINT_TO_POINT_MAE"] = mean_absolute_error(y_test, predictions)
-    info_results["POINT_TO_POINT_MSE"] = mean_absolute_error(y_test, predictions)
+    info_results["POINT_TO_POINT_MSE"] = mean_squared_error(y_test, predictions)
     info_results["MEAN_Y"] = np.mean(y_test)
     index_result = 0
     info_results["BEST_MEDIUM_WORST_MAE"] = [0, 0, 0]
@@ -631,6 +633,7 @@ def generate_results_model_2(
             index_result += 1
     else:
         for i in indices:
+            info_results["BEST_MEDIUM_WORST_MAE"][index_result] = list_of_MAE[i]
             END = 24
             STARTED_MINUTE = 0
             previous = np.ones(shape=(24))

@@ -67,7 +67,8 @@ def make_mets_predictions(
             WINDOW_SIZE = X_train.shape[2]
 
         # Creamos el modelo LSTM
-        model_LSTM = create_LSTM_model(prediction_horizion=HORIZON, window_size=WINDOW_SIZE, model=MODELO)
+        model_LSTM = create_LSTM_model(prediction_horizion=HORIZON, window_size=WINDOW_SIZE, model=MODELO,
+                                       number_of_participants=NUMBER_OF_PARTICIPANTS)
 
         model_LSTM.summary()
 
@@ -122,8 +123,8 @@ if __name__ == "__main__":
     if not isinstance(sys.argv[1], dict):
         if sys.argv[1] == "all":
             logging.warning("Generando predicciones de todas las combinaciones")
-            for MODELO in [0,1,2][0:1]:
-                for COMPUTER_OPTION in [0, 1]:
+            for MODELO in [0,1,2][1:2]:
+                for COMPUTER_OPTION in [0, 1][1:2]:
                     for SPLIT in [0,1,2,3,4,5,6,7,8]:
                         make_mets_predictions(MODELO=MODELO,
                                               COMPUTED_OPTION=COMPUTER_OPTION,
