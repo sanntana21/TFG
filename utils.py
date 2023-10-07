@@ -501,9 +501,9 @@ def generate_results_model_1(
     poblational_y_test = np.ones(shape=(DATA_BY_PARTICIPANT, horizon))
     poblational_X_test = np.ones(shape=(DATA_BY_PARTICIPANT, window_size))
     for i in range(0, DATA_BY_PARTICIPANT):
-        poblational_prediction[i, :] = np.sum(np.array(predictions[i::DATA_BY_PARTICIPANT]), axis=0)
-        poblational_y_test[i, :] = np.sum(np.array(y_test[i::DATA_BY_PARTICIPANT]), axis=0)
-        poblational_X_test[i, :] = np.sum(np.array(X_test[i::DATA_BY_PARTICIPANT]), axis=0)
+        poblational_prediction[i, :] = np.sum(np.array(predictions[25*i:25*(i+1)]), axis=0)
+        poblational_y_test[i, :] = np.sum(np.array(y_test[25*i:25*(i+1)]), axis=0)
+        poblational_X_test[i, :] = np.sum(np.array(X_test[25*i:25*(i+1)]), axis=0)
     info_results["MEAN_Y"] = np.mean(poblational_y_test)
     info_results["POINT_TO_POINT_MAE"] = mean_absolute_error(poblational_y_test, poblational_prediction)
     info_results["POINT_TO_POINT_MSE"] = mean_squared_error(poblational_y_test, poblational_prediction)

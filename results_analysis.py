@@ -5,17 +5,6 @@ import polars as pl
 import array
 import pathlib
 
-def add_column(
-        *,
-        df : pl.DataFrame = None,
-        col : pl.Series = None,
-        name : str = None
-):
-    df.append(col.re)
-    df.rename({})
-
-
-    return df
 
 def make_analysis(
         *,
@@ -40,6 +29,7 @@ def make_analysis(
         pl_worst = pl.DataFrame(eje)
         pl_average = pl.DataFrame(eje)
         pl_two_days = pl.DataFrame(eje)
+        pl_prueba = pl.DataFrame(eje)
 
         for model in ["Agregado","Individual","Matrix"]:
             pl_resultados = pl.DataFrame()
@@ -90,6 +80,7 @@ def make_analysis(
             pl_worst = pl_worst.with_columns(pl_resultados["WORST"].rename(f"{model}"))
             pl_average = pl_average.with_columns(pl_resultados["MEDIUM"].rename(f"{model}"))
             pl_two_days = pl_two_days.with_columns(pl_resultados["TWO_DAYS_RESULTS_PREDICTED"].rename(f"{model}"))
+            pl_prueba = pl_prueba.with_columns(pl_resultados["POBLATIONAL_MEAN"].rename(f"{model}"))
 
         path_analisis = f"Resources/Resultados/analisis_POINT_TO_POINT.csv"
         pl_point_to_point.write_csv(path_analisis,sep=",")

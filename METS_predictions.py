@@ -123,9 +123,9 @@ if __name__ == "__main__":
     if not isinstance(sys.argv[1], dict):
         if sys.argv[1] == "all":
             logging.warning("Generando predicciones de todas las combinaciones")
-            for MODELO in [0,1,2][2:]:
-                for COMPUTER_OPTION in [0, 1][1:]:
-                    for SPLIT in [0,1,2,3,4,5,6,7,8][7:8]:
+            for MODELO in [0,1,2][1:2]:
+                for COMPUTER_OPTION in [0, 1][0:1]:
+                    for SPLIT in [0,1,2,3,4,5,6,7,8]:
                         make_mets_predictions(MODELO=MODELO,
                                               COMPUTED_OPTION=COMPUTER_OPTION,
                                               SAVE_RESULTS=True,
