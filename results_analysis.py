@@ -14,6 +14,11 @@ def make_analysis(
         computed_option : int = None
 ):
     try:
+        computed_option_str = ""
+        if computed_option == 1:
+            computed_option_str = "hour"
+        else:
+            computed_option_str = "minute"
         # model = ["Agregado","Individual","Matrix"][num_model]
         if computed_option > 2:
             raise ValueError("Computed option no disponible")
@@ -82,22 +87,22 @@ def make_analysis(
             pl_two_days = pl_two_days.with_columns(pl_resultados["TWO_DAYS_RESULTS_PREDICTED"].rename(f"{model}"))
             pl_prueba = pl_prueba.with_columns(pl_resultados["POBLATIONAL_MEAN"].rename(f"{model}"))
 
-        path_analisis = f"Resources/Resultados/analisis_POINT_TO_POINT.csv"
+        path_analisis = f"Resources/Resultados/{computed_option_str}_analisis_POINT_TO_POINT.csv"
         pl_point_to_point.write_csv(path_analisis,sep=",")
 
-        path_analisis = f"Resources/Resultados/analisis_TARGET.csv"
+        path_analisis = f"Resources/Resultados/{computed_option_str}_analisis_TARGET.csv"
         pl_tarjet.write_csv(path_analisis,sep=",")
 
-        path_analisis = f"Resources/Resultados/analisis_BEST.csv"
+        path_analisis = f"Resources/Resultados/{computed_option_str}_analisis_BEST.csv"
         pl_best.write_csv(path_analisis,sep=",")
 
-        path_analisis = f"Resources/Resultados/analisis_WORST.csv"
+        path_analisis = f"Resources/Resultados/{computed_option_str}_analisis_WORST.csv"
         pl_worst.write_csv(path_analisis,sep=",")
 
-        path_analisis = f"Resources/Resultados/analisis_MEDIUM.csv"
+        path_analisis = f"Resources/Resultados/{computed_option_str}_analisis_MEDIUM.csv"
         pl_average.write_csv(path_analisis,sep=",")
 
-        path_analisis = f"Resources/Resultados/analisis_TWO_DAYS_RESULTS_PREDICTED.csv"
+        path_analisis = f"Resources/Resultados/{computed_option_str}_analisis_TWO_DAYS_RESULTS_PREDICTED.csv"
         pl_two_days.write_csv(path_analisis,sep=",")
 
     except BaseException as e:
