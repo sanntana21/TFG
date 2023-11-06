@@ -1,12 +1,4 @@
-import json
-import logging
-import sys
-
 from utils import *
-
-
-# import numpy as np
-# import tensorflow as tf
 
 def make_mets_predictions(
         *,
@@ -18,19 +10,33 @@ def make_mets_predictions(
         SHOW_RESULTS: bool = None,
         seed: int = 42
 ):
+    """
+    GENERA LOS RESULTADOS PARA UN DETERMINADO MODELO Y SPLIT SIGUIENDO TODOS LOS PASOS DEL APRENDIZAJE:
+        1. PREPROCESAMIENTO DE DATOS
+        2. ENTRENAMIENTO DEL MODELO
+        3. TESTEO DEL MODELO
+    LOS PARÁMETROS DE ENTRADA INDICAN:
+
+    @:param MODELO: Modelo a utilizar ->
+            0 : AGGREGATED DATA
+            1 : INDIVIDUAL DATA
+            2 : MATRIX DATA
+    @:param COMPUTED_OPTION: Horizonte de predicción utilizada ->
+            0 : HORIZON = MINUTE
+            1 : HORIZON = HOUR
+            2 : HORIZON = DAY ( deprecated )
+    @:param LOW_DATA : Indica si trabajar con todos los datos, o la opción reducida de los mismos
+    @:param SPLIT: División de folds utilizada para obtener los resultados
+    @:param SAVE_RESUTS : indica si guardar o no los resultados. En caso de false se presentan por pantalla
+    @:param SHOW_RESULTS: indica si mostrar los datos por pantalla, específicamente las gráficas que se guardarán
+    en formato html.
+
+    @:param SEED: semilla a utilizar para obtener los resultados
+
+    @:return Diccionario con una entrada "data" para los resultados calculados y "errors" en el caso de que ocurra un error
+    """
     results = {"data": {}, "errors": []}
     try:
-        """
-        MODELO ->
-                0 : AGGREGATED DATA
-                1 : INDIVIDUAL DATA
-                2 : MATRIX DATA
-        COMPUTED_OPTION ->
-                0 : HORIZON = MINUTE
-                1 : HORIZON = HOUR
-                2 : HORIZON = DAY ( deprecated )
-        """
-
         np.random.seed(seed)
         tf.random.set_seed(seed)
         HORIZON = WINDOW_SIZE = None
@@ -48,6 +54,9 @@ def make_mets_predictions(
         # Leemos los datos de los participantes
         dataX, dataY = read_data(low_data=LOW_DATA, computed_option=COMPUTED_OPTION, dir_with_data=DIR_NAMES["read"])
         NUMBER_OF_PARTICIPANTS = dataX.shape[0]
+        """
+        Generación de los conjuntos a utilizar
+        """
         X_train, y_train, X_validation, y_validation, X_test, y_test = train_test_validation_split(dataX, dataY,
                                                                                                    get_split_time_definiton(
                                                                                                        num_split=SPLIT))
@@ -90,6 +99,7 @@ def make_mets_predictions(
                               validation_data=(X_validation, y_validation),
                               callbacks=[early_stopping])
 
+        #Entrenado el modelo realizamos las predicciones y obtenemos los resultados
         predictions = make_preds(model=model_LSTM, input_data=X_test)
 
         info_results = generate_results(
@@ -104,6 +114,8 @@ def make_mets_predictions(
             show=SHOW_RESULTS)
 
         info_results["hist"] = hist
+
+        #Guardamos los resultados si así se indica
         if SAVE_RESULTS:
             save_results(results_dir_to_save_results=DIR_NAMES["save"], info_results=info_results,
                          computed_option=COMPUTED_OPTION, low_data=LOW_DATA,
@@ -118,64 +130,15 @@ def make_mets_predictions(
 
 
 if __name__ == "__main__":
-    sys.argv.append("all")
-    print(sys.argv)
-    if not isinstance(sys.argv[1], dict):
-        if sys.argv[1] == "all":
-            logging.warning("Generando predicciones de todas las combinaciones")
-            for MODELO in [0,1,2]:
-                for COMPUTER_OPTION in [0, 1]:
-                    for SPLIT in [0,1,2,3,4,5,6,7,8]:
-                        make_mets_predictions(MODELO=MODELO,
-                                              COMPUTED_OPTION=COMPUTER_OPTION,
-                                              SAVE_RESULTS=True,
-                                              LOW_DATA=True,
-                                              SPLIT=SPLIT,
-                                              SHOW_RESULTS=False,
-                                              seed=42)
-        else:
-            logging.error("Los parametros de entrada no han sido indicados correctamente")
-    else:
-        body = sys.argv[1]
-        default = {
-            "modelo": 0, "computed_option": 0, "save_results": False, "split": 0, "show_results": False, "seed": 42,
-            "low_data": True
-        }
-        for param in ["modelo", "computed_option", "low_data", "save_results", "split", "show_results", "seed"]:
-            if not body.get(param):
-                body[param] = default[param]
+    logging.warning("Generando predicciones de todas las combinaciones")
+    for MODELO in [0,1,2]:
+        for COMPUTER_OPTION in [0, 1]:
+            for SPLIT in [0,1,2,3,4,5,6,7,8]:
+                make_mets_predictions(MODELO=MODELO,
+                                      COMPUTED_OPTION=COMPUTER_OPTION,
+                                      SAVE_RESULTS=True,
+                                      LOW_DATA=True,
+                                      SPLIT=SPLIT,
+                                      SHOW_RESULTS=False,
+                                      seed=42)
 
-        results = make_mets_predictions(
-            MODELO=body["modelo"],
-            COMPUTED_OPTION=body["computed_option"],
-            SAVE_RESULTS=body["save_results"],
-            LOW_DATA=body["low_data"],
-            SPLIT=body["split"],
-            SHOW_RESULTS=body["show_results"],
-            seed=body["seed"]
-        )
-
-        if len(results["errors"]) < 1:
-            info_results = results["data"]
-            text_results = dict(
-                POINT_TO_POINT_MAE=info_results["POINT_TO_POINT_MAE"],
-                POINT_TO_POINT_MSE=info_results["POINT_TO_POINT_MSE"],
-                POBLATIONAL_MAE=info_results["POBLATIONAL_MAE"],
-                POBLATIONAL_MSE=info_results["POBLATIONAL_MSE"],
-                BEST=info_results["BEST_MEDIUM_WORST_MAE"][2],
-                BEST_OLS=info_results["BEST_MEDIUM_WORST_VALUE_DISPERSION"][2],
-                MEDIUM=info_results["BEST_MEDIUM_WORST_MAE"][1],
-                MEDIUM_OLS=info_results["BEST_MEDIUM_WORST_VALUE_DISPERSION"][1],
-                WORST=info_results["BEST_MEDIUM_WORST_MAE"][0],
-                WORST_OLS=info_results["BEST_MEDIUM_WORST_VALUE_DISPERSION"][0],
-                TWO_DAYS_RESULTS_REAL=info_results["TWO_DAYS_RESULTS_REAL"],
-                TWO_DAYS_RESULTS_PREDICTED=info_results["TWO_DAYS_RESULTS_PREDICTED"],
-                TWO_DAYS_OLS=info_results["TWO_DAYS_RESULTS_DISPERSION_VALUE"],
-                TRANSFORMED_PREDICITION_OLS=info_results["TRANSFORMED_PREDICITION_DISPERSION_VALUE"],
-                MEAN_Y=info_results["MEAN_Y"],
-                POBLATIONAL_MEAN=info_results["POBLATIONAL_MEAN"],
-                HIST=info_results["hist"].history
-            )
-            text_results = {k: str(v) for k, v in text_results.items()}
-
-            print(json.dumps(text_results, indent=2))

@@ -30,6 +30,26 @@ def plot_ts(df,dfx="Minute",dfy="METS",_title="DF minute x Mets"):
 
     plt.figure()
     fig = px.line(df, x = dfx, y = dfy , title = _title)
+    fig.update_layout(
+    plot_bgcolor='white'
+    )
+
+    fig.update_xaxes(
+    mirror=True,
+    ticks='outside',
+    showline=True,
+    linecolor='black',
+    gridcolor='lightgrey'
+    )
+
+    fig.update_yaxes(
+    mirror=True,
+    ticks='outside',
+    showline=True,
+    linecolor='black',
+    gridcolor='lightgrey'
+    )
+
     fig.update_xaxes(
         rangeslider_visible = True,
         rangeselector = dict(
@@ -42,7 +62,7 @@ def plot_ts(df,dfx="Minute",dfy="METS",_title="DF minute x Mets"):
         )
 
     )
-    fig.show()
+    return fig
 
 def plot_predictions_vs_real(predictions, reals):
     df = pd.DataFrame()
@@ -208,6 +228,15 @@ def create_LSTM_model(
         model : int = None,
         number_of_participants : int = None
 ):
+    """
+
+    Crea un modelo LSTM en keras dependiendo del modelo y el horizonte de prediccion deseado
+    :param prediction_horizion: Tamaño del horizonte a predecir
+    :param window_size: Tamaño de la ventana de datos
+    :param model: Modelo de datos utilizado [0,1,2]
+    :param number_of_participants: Número de participantes del dataset utilizado ( caso de que modelo == 2 )
+    :return: Modelo LSTM
+    """
     tf.random.set_seed(42)
     # Setup dataset hyperparameters
     HORIZON = prediction_horizion
@@ -261,6 +290,16 @@ def save_results(
     computed_option : int = None,
     info_results : dict = None
 ):
+    """
+    Guarda los datos en sus respectivas carpetas
+
+    :param results_dir_to_save_results: Directorio de resultados
+    :param low_data: indica si añadir la extensión low data a las carpetas de datos
+    :param split: división a la que pertenecen los datos
+    :param computed_option: horizonte de predicción
+    :param info_results: diccionario con los resultados
+    :return:
+    """
     try:
         file_path = f'Resources/Resultados/{results_dir_to_save_results}/'
 
@@ -322,6 +361,9 @@ def save_results(
 
     return True
 def change_shape_by_participant(data):
+    """
+    Permite crear el conjunto de datos para el modelo 1
+    """
     original_shape = data.shape
     new_shape = (original_shape[0] * original_shape[1], original_shape[2])
     reshaped_array = data.reshape(new_shape)
@@ -329,6 +371,9 @@ def change_shape_by_participant(data):
 def data_splits_preprocessing(
         X_train, y_train, X_validation, y_validation, X_test, y_test,
         model):
+    """
+    preprocesamiento de los conjuntos creados
+    """
     try:
         if model == 0:
             X_train, y_train, X_validation, y_validation, X_test, y_test = [
@@ -365,6 +410,9 @@ def generate_results(
         show,
         window_size
 ):
+    """
+    Genera los resultados para el modelo
+    """
     info_results = {}
     if model == 0:
        info_results = generate_results_model_0(y_test=y_test,
@@ -691,6 +739,9 @@ def learning_curves(
         hist,
         file_path : str = None
 ):
+    """
+    Crea un diagrama con las curvas de aprendizaje
+    """
     fig, loss_ax = plt.subplots()
 
     loss_ax.plot(hist.history["loss"], "y", label = "train_loss")
@@ -703,6 +754,9 @@ def get_split_time_definiton(
         *,
         num_split : int = None
 ):
+    """
+    Obtiene la definición del split en días horas y minutos
+    """
     #Definicion de los splits en dias horas minutos....
     INDEXS = [
         #SPLIT 0
