@@ -110,5 +110,5 @@ def make_analysis(
     return True
 
 if __name__ == "__main__":
-    for computed_option in [0,1]:
+    for computed_option in [0,1,2]:
         make_analysis(computed_option=computed_option)
